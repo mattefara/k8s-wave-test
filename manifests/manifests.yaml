@@ -1,0 +1,89 @@
+# https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo
+  labels:
+    app: demo
+  annotations:
+    wave.pusher.com/update-on-config-change: "true"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: demo
+  template:
+    metadata:
+      labels:
+        app: demo
+    spec:
+      containers:
+      - name: demo
+        image: ttl.sh/960c0a6c-57e0-4720-ad3b-339af21da426:2h
+        imagePullPolicy: Always
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: demo
+              key: DB_HOST
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: demo
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: pg-secret-com 
+              key: username 
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pg-secret-com 
+              key: password 
+        - name: PG_SLEEP 
+          value: "0"
+        - name: PG_MAX_CONN
+          value: "10"
+        - name: PG_MAX_CONN_IDLE
+          value: "10"
+        ports:
+        - containerPort: 8081 
+          name: demo
+---
+
+# https://kubernetes.io/docs/concepts/configuration/configmap/
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo
+data:
+  DB_HOST: "pg-postgresql.postgres"
+  DB_NAME: postgres 
+
+---
+
+# https://kubernetes.io/docs/concepts/services-networking/service/
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo
+spec:
+  selector:
+    app: demo
+  type: NodePort 
+  ports:
+  - name: demo
+    protocol: TCP
+    port: 8081
+    targetPort: 8081 
+---
+
+
